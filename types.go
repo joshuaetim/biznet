@@ -3,8 +3,8 @@ package main
 import "time"
 
 type createRecordRequest struct {
-	Data      string
-	OrderDate time.Time
-	Forward   bool
-	Location  string
+	Data      string    `json:"data"`
+	OrderDate time.Time `json:"order_date"`
+	Forward   bool      `json:"forward"`
+	Location  string    `json:"location"`
 }

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -35,8 +37,8 @@ func main() {
 		ReadTimeout:  2 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
-	go func ()  {
-		
+	go func() {
+		fmt.Printf("server started on %v\n", srv.Addr)
 		err := srv.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal(err)
@@ -46,6 +48,13 @@ func main() {
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, os.Interrupt, syscall.SIGTERM)
 
-	<- interruptCh
+	<-interruptCh
+	fmt.Println("interrupt signal received, shutting down...")
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	defer cancel()
+	
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal(err)
+	}
 }

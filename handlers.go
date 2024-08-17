@@ -27,6 +27,17 @@ func NewRecordHandler(db *gorm.DB, rdb *redis.Client, logger *log.Logger) *Recor
 	}
 }
 
+func (rh *RecordHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	var records []Record
+	err := rh.db.Find(&records).Error
+	if err != nil {
+		ToJSON(w, ResponseMsg{"error": err.Error()}, http.StatusInternalServerError)
+		return
+	}
+
+	ToJSON(w, records, http.StatusOK)
+}
+
 func (rh *RecordHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createRecordRequest
 	if err := FromJSON(r.Body, &req); err != nil {
@@ -87,7 +98,7 @@ func (rh *RecordHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ToJSON(w, record, http.StatusInternalServerError)
+	ToJSON(w, record, http.StatusOK)
 }
 
 func (rh *RecordHandler) Delete(w http.ResponseWriter, r *http.Request) {
