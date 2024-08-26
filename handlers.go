@@ -66,7 +66,7 @@ func (rh *RecordHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return data
-	ToJSON(w, record, http.StatusOK)
+	ToJSON(w, record, http.StatusCreated)
 }
 
 func (rh *RecordHandler) Update(w http.ResponseWriter, r *http.Request) {
