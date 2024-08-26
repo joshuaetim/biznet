@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-faker/faker/v4"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
@@ -60,7 +61,7 @@ func TestCreateRecord(t *testing.T) {
 	assert.EqualValues(t, count, 1)
 }
 
-func TestGetAllRequests(t *testing.T) {
+func TestGetAllRecords(t *testing.T) {
 	engine, flush := setup()
 	defer flush()
 
@@ -93,10 +94,80 @@ func TestGetAllRequests(t *testing.T) {
 	assert.EqualValues(t, records[count-1].Data, response[count-1]["data"])
 }
 
+func TestUpdateRecord(t *testing.T) {
+	engine, flush := setup()
+	defer flush()
+
+	count := 1
+	records, err := populateRecord(engine, count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := records[0]
+
+	logger := log.Default()
+	handler := NewRecordHandler(engine.db, engine.rdb, logger)
+
+	requestData := JSONData{
+		"data": "record - updated",
+	}
+	content, err := json.Marshal(requestData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := bytes.NewBuffer(content)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", "/records", data)
+	request.SetPathValue("id", record.ID.String())
+	handler.Update(recorder, request)
+
+	result := recorder.Result()
+
+	assert.Equal(t, result.StatusCode, http.StatusOK)
+
+	var retrieved Record
+	err = engine.db.First(&retrieved, &Record{ID: record.ID}).Error
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Equal(t, retrieved.Data, requestData["data"])
+}
+
+func TestDeleteRecord(t *testing.T) {
+	engine, flush := setup()
+	defer flush()
+
+	records, err := populateRecord(engine, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := records[0]
+
+	handler := NewRecordHandler(engine.db, engine.rdb, log.Default())
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("DELETE", "/records", nil)
+	request.SetPathValue("id", record.ID.String())
+	handler.Delete(recorder, request)
+
+	result := recorder.Result()
+	assert.Equal(t, result.StatusCode, http.StatusOK)
+
+	var retrieved []Record
+	err = engine.db.Find(&retrieved).Error
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, len(retrieved), 0)
+}
+
 func populateRecord(engine *testEngine, count int) ([]Record, error) {
 	var records []Record
 	for range count {
+		id := uuid.New()
 		records = append(records, Record{
+			ID:        id,
 			Data:      faker.Word(),
 			OrderDate: time.Now(),
 			Forward:   true,
